@@ -1,0 +1,5 @@
+{
+  "name": "Magic Tales",
+  "description": "A magical bedtime story generator for children using Gemini.",
+  "requestFramePermissions": []
+}
