@@ -21,3 +21,10 @@ export const TOPICS = [
     "Не бояться темноты",
     "Свой вариант"
 ];
+
+// Объявляем типы для Telegram WebApp, чтобы TypeScript не ругался
+declare global {
+    interface Window {
+        Telegram: any;
+    }
+}

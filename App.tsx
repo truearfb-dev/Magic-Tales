@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { InputForm } from './components/InputForm';
 import { StoryBook } from './components/StoryBook';
 import { SubscriptionModal } from './components/SubscriptionModal';
@@ -11,6 +11,27 @@ function App() {
   const [story, setStory] = useState<string>('');
   const [params, setParams] = useState<StoryParams | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
+
+  // Инициализация Telegram Mini App
+  useEffect(() => {
+    if (window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
+      
+      // Сообщаем, что приложение готово
+      tg.ready();
+      
+      // Разворачиваем на весь экран
+      tg.expand();
+      
+      // Настраиваем цвета шапки телеграма под наш дизайн
+      try {
+        tg.setHeaderColor('#0B1026'); // Цвет фона хедера
+        tg.setBackgroundColor('#0B1026'); // Цвет фона приложения
+      } catch (e) {
+        console.log("Error setting header color", e);
+      }
+    }
+  }, []);
 
   const handleGenerate = async (inputParams: StoryParams) => {
     setParams(inputParams);
