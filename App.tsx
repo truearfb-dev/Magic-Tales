@@ -10,21 +10,30 @@ function App() {
   const [appState, setAppState] = useState<AppState>(AppState.INPUT);
   const [story, setStory] = useState<string>('');
   const [params, setParams] = useState<StoryParams | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const handleGenerate = async (inputParams: StoryParams) => {
     setParams(inputParams);
     setAppState(AppState.GENERATING);
+    setErrorMessage('');
     
     try {
       const generatedStory = await generateStory(inputParams);
       setStory(generatedStory);
       // Once generated, move to LOCKED state (the Sub Lock feature)
       setAppState(AppState.LOCKED);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       setAppState(AppState.ERROR);
-      // In a real app, show toast error here
-      setTimeout(() => setAppState(AppState.INPUT), 3000);
+      // Extract meaningful error message
+      const msg = error?.message || "Неизвестная ошибка";
+      setErrorMessage(msg);
+      
+      // Auto-reset after 5 seconds to let user try again
+      setTimeout(() => {
+        setAppState(AppState.INPUT);
+        setErrorMessage('');
+      }, 5000);
     }
   };
 
@@ -64,8 +73,13 @@ function App() {
         )}
 
         {appState === AppState.ERROR && (
-            <div className="text-center p-8 bg-red-900/50 border border-red-500 rounded-xl">
-                <p className="text-white text-lg">Упс! Магия дала сбой. Попробуйте снова.</p>
+            <div className="max-w-md w-full text-center p-8 bg-red-900/80 backdrop-blur-md border border-red-500 rounded-xl shadow-2xl animate-bounce-in">
+                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                     <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Упс! Магия дала сбой</h3>
+                <p className="text-red-200 mb-4">{errorMessage}</p>
+                <p className="text-sm text-gray-400">Попробуйте еще раз через пару секунд...</p>
             </div>
         )}
 
