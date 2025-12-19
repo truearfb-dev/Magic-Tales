@@ -2,11 +2,17 @@ import { GoogleGenAI } from "@google/genai";
 import { StoryParams } from "../types";
 
 // Initialize Gemini Client
-// In a real Vercel environment, you might proxy this through a serverless function to hide the key,
-// but for this client-side demo we use the env variable directly as per instructions.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// We add a fallback to empty string to prevent the app from crashing with "White Screen" 
+// on load if the process.env.API_KEY is undefined during build/runtime initialization.
+const apiKey = process.env.API_KEY || ""; 
+const ai = new GoogleGenAI({ apiKey: apiKey });
 
 export const generateStory = async (params: StoryParams): Promise<string> => {
+    if (!apiKey) {
+        console.error("API Key is missing!");
+        throw new Error("API Key is missing. Please check your Vercel settings.");
+    }
+
     const topic = params.topic === "Свой вариант" ? params.customTopic : params.topic;
     
     // We use gemini-3-flash-preview as it is the recommended model for text tasks in the system instructions
