@@ -9,6 +9,25 @@ interface StoryBookProps {
 export const StoryBook: React.FC<StoryBookProps> = ({ title, content, onReset }) => {
     const paragraphs = content.split('\n').filter(p => p.trim() !== '');
 
+    const handleShare = async () => {
+        const shareText = `${title}\n\n${content}\n\n✨ Сказка создана в приложении Magic Tales`;
+        
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: title,
+                    text: shareText,
+                });
+            } catch (err) {
+                console.log('Error sharing:', err);
+            }
+        } else {
+            // Fallback to clipboard
+            navigator.clipboard.writeText(shareText);
+            alert("Сказка скопирована в буфер обмена!");
+        }
+    };
+
     return (
         <div className="w-full max-w-2xl mx-auto animate-fade-in relative z-10 px-4 pb-12">
             <div className="bg-[#FFFDF5] text-[#1F2937] rounded-sm md:rounded-r-lg shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden relative min-h-[60vh] flex flex-col">
@@ -46,13 +65,21 @@ export const StoryBook: React.FC<StoryBookProps> = ({ title, content, onReset })
                 </div>
             </div>
 
-            <div className="mt-8 text-center">
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
                  <button 
                     onClick={onReset}
-                    className="inline-flex items-center gap-2 text-[#FDE047] hover:text-white font-semibold transition-colors py-2 px-4 rounded-lg hover:bg-[#1F2937]"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-[#FDE047] border border-[#FDE047]/30 hover:border-[#FDE047] font-semibold transition-colors py-3 px-6 rounded-xl hover:bg-[#FDE047]/10"
                 >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path></svg>
-                    Создать еще одну
+                    Создать новую
+                </button>
+
+                <button 
+                    onClick={handleShare}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2AABEE] hover:bg-[#229ED9] text-white font-semibold transition-colors py-3 px-6 rounded-xl shadow-lg"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                    Поделиться
                 </button>
             </div>
         </div>

@@ -3,10 +3,11 @@ import { StoryParams, TOPICS } from '../types';
 
 interface InputFormProps {
     onSubmit: (params: StoryParams) => void;
+    onOpenLibrary: () => void;
     isGenerating: boolean;
 }
 
-export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isGenerating }) => {
+export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onOpenLibrary, isGenerating }) => {
     const [name, setName] = useState('');
     const [hero, setHero] = useState('');
     const [topic, setTopic] = useState(TOPICS[0]);
@@ -20,8 +21,18 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isGenerating }) 
 
     return (
         <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto space-y-6 p-6 bg-[#161D36] rounded-2xl border border-[#2D3766] shadow-xl relative z-10">
-            <div className="text-center mb-6">
-                <h1 className="text-3xl font-bold text-[#FDE047] mb-2 font-serif tracking-wide">Magic Tales</h1>
+            <div className="text-center mb-6 relative">
+                 <button 
+                    type="button"
+                    onClick={onOpenLibrary}
+                    className="absolute right-0 top-0 text-[#FDE047] hover:text-white transition-colors flex flex-col items-center group"
+                    title="Моя полка"
+                >
+                    <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                    <span className="text-[10px] mt-1 font-semibold">Полка</span>
+                </button>
+
+                <h1 className="text-3xl font-bold text-[#FDE047] mb-2 font-serif tracking-wide pt-2">Magic Tales</h1>
                 <p className="text-gray-400 text-sm">Создайте волшебную историю для вашего ребенка</p>
             </div>
 

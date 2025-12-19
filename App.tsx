@@ -3,35 +3,56 @@ import { InputForm } from './components/InputForm';
 import { StoryBook } from './components/StoryBook';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { LoadingOverlay } from './components/LoadingOverlay';
+import { Library } from './components/Library';
 import { generateStory } from './services/geminiService';
-import { StoryParams, AppState } from './types';
+import { StoryParams, AppState, SavedStory } from './types';
+
+const STORAGE_KEY = 'magic_tales_library';
 
 function App() {
   const [appState, setAppState] = useState<AppState>(AppState.INPUT);
-  const [story, setStory] = useState<string>('');
+  const [generatedStoryData, setGeneratedStoryData] = useState<{ title: string; content: string } | null>(null);
   const [params, setParams] = useState<StoryParams | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [savedStories, setSavedStories] = useState<SavedStory[]>([]);
 
-  // Инициализация Telegram Mini App
+  // Инициализация Telegram Mini App и загрузка историй
   useEffect(() => {
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
-      
-      // Сообщаем, что приложение готово
       tg.ready();
-      
-      // Разворачиваем на весь экран
       tg.expand();
-      
-      // Настраиваем цвета шапки телеграма под наш дизайн
       try {
-        tg.setHeaderColor('#0B1026'); // Цвет фона хедера
-        tg.setBackgroundColor('#0B1026'); // Цвет фона приложения
+        tg.setHeaderColor('#0B1026');
+        tg.setBackgroundColor('#0B1026');
       } catch (e) {
         console.log("Error setting header color", e);
       }
     }
+
+    // Load stories from local storage
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        setSavedStories(JSON.parse(stored));
+      } catch (e) {
+        console.error("Failed to parse stories", e);
+      }
+    }
   }, []);
+
+  const saveStoryToLibrary = (title: string, content: string, hero: string) => {
+    const newStory: SavedStory = {
+        id: Date.now().toString(),
+        date: new Date().toLocaleDateString('ru-RU'),
+        title,
+        content,
+        hero
+    };
+    const updatedStories = [...savedStories, newStory];
+    setSavedStories(updatedStories);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedStories));
+  };
 
   const handleGenerate = async (inputParams: StoryParams) => {
     setParams(inputParams);
@@ -39,18 +60,18 @@ function App() {
     setErrorMessage('');
     
     try {
-      const generatedStory = await generateStory(inputParams);
-      setStory(generatedStory);
-      // Once generated, move to LOCKED state (the Sub Lock feature)
+      const storyData = await generateStory(inputParams);
+      setGeneratedStoryData(storyData);
+      
+      // Auto-save successful story
+      saveStoryToLibrary(storyData.title, storyData.content, inputParams.hero);
+
       setAppState(AppState.LOCKED);
     } catch (error: any) {
       console.error(error);
       setAppState(AppState.ERROR);
-      // Extract meaningful error message
       const msg = error?.message || "Неизвестная ошибка";
       setErrorMessage(msg);
-      
-      // Auto-reset after 5 seconds to let user try again
       setTimeout(() => {
         setAppState(AppState.INPUT);
         setErrorMessage('');
@@ -59,16 +80,28 @@ function App() {
   };
 
   const handleUnlock = () => {
-      // Simulate "Unlocking" state if needed, or go straight to READING
       setAppState(AppState.UNLOCKING);
       setTimeout(() => {
           setAppState(AppState.READING);
-      }, 500); // Short transition
+      }, 500);
   };
 
   const handleReset = () => {
-    setStory('');
+    setGeneratedStoryData(null);
     setParams(null);
+    setAppState(AppState.INPUT);
+  };
+
+  const handleOpenLibrary = () => {
+    setAppState(AppState.LIBRARY);
+  };
+
+  const handleSelectStory = (story: SavedStory) => {
+    setGeneratedStoryData({ title: story.title, content: story.content });
+    setAppState(AppState.READING);
+  };
+
+  const handleBackToInput = () => {
     setAppState(AppState.INPUT);
   };
 
@@ -82,13 +115,24 @@ function App() {
       <main className="flex-grow flex flex-col items-center justify-center p-4 relative z-10 w-full max-w-5xl mx-auto">
         
         {appState === AppState.INPUT && (
-          <InputForm onSubmit={handleGenerate} isGenerating={false} />
+          <InputForm 
+            onSubmit={handleGenerate} 
+            onOpenLibrary={handleOpenLibrary}
+            isGenerating={false} 
+          />
+        )}
+
+        {appState === AppState.LIBRARY && (
+            <Library 
+                stories={savedStories} 
+                onSelectStory={handleSelectStory} 
+                onBack={handleBackToInput} 
+            />
         )}
 
         {appState === AppState.GENERATING && (
            <>
-             {/* We keep the form visible but maybe blurred or just show the overlay on top */}
-             <InputForm onSubmit={() => {}} isGenerating={true} />
+             <InputForm onSubmit={() => {}} onOpenLibrary={()=>{}} isGenerating={true} />
              <LoadingOverlay />
            </>
         )}
@@ -106,7 +150,7 @@ function App() {
 
         {appState === AppState.LOCKED && (
            <>
-              <LoadingOverlay /> {/* Keep loading aesthetic in bg if desired, or just blur */}
+              <LoadingOverlay />
               <SubscriptionModal onUnlock={handleUnlock} />
            </>
         )}
@@ -115,10 +159,10 @@ function App() {
             <LoadingOverlay />
         )}
 
-        {appState === AppState.READING && params && (
+        {appState === AppState.READING && generatedStoryData && (
           <StoryBook 
-            title={`Сказка про ${params.hero}`} 
-            content={story} 
+            title={generatedStoryData.title} 
+            content={generatedStoryData.content} 
             onReset={handleReset} 
           />
         )}
