@@ -3,13 +3,16 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
-  // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
   const env = loadEnv(mode, (process as any).cwd(), '');
+  
+  // Prioritize process.env (Vercel system vars) then loaded env file
+  const apiKey = process.env.API_KEY || env.API_KEY;
+
   return {
     plugins: [react()],
     define: {
-      // Prevents "process is not defined" error in browser and injects the key
-      'process.env.API_KEY': JSON.stringify(env.API_KEY),
+      // Inject the key safely into the client-side code
+      'process.env.API_KEY': JSON.stringify(apiKey),
     },
   };
 });

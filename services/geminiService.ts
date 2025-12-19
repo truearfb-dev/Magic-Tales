@@ -2,21 +2,19 @@ import { GoogleGenAI } from "@google/genai";
 import { StoryParams } from "../types";
 
 // Initialize Gemini Client
-// We add a fallback to empty string to prevent the app from crashing with "White Screen" 
-// on load if the process.env.API_KEY is undefined during build/runtime initialization.
 const apiKey = process.env.API_KEY || ""; 
 const ai = new GoogleGenAI({ apiKey: apiKey });
 
 export const generateStory = async (params: StoryParams): Promise<string> => {
+    // Check if key exists immediately
     if (!apiKey) {
-        console.error("API Key is missing!");
-        throw new Error("API Key is missing. Please check your Vercel settings.");
+        console.error("API Key is missing in the build!");
+        throw new Error("API Key не найден. Добавьте переменную API_KEY в настройках Vercel и пересоберите проект (Redeploy).");
     }
 
     const topic = params.topic === "Свой вариант" ? params.customTopic : params.topic;
     
-    // We use gemini-3-flash-preview as it is the recommended model for text tasks in the system instructions
-    // providing a good balance of speed and quality for creative writing.
+    // Using gemini-3-flash-preview as recommended for text tasks
     const model = 'gemini-3-flash-preview'; 
 
     const prompt = `Напиши короткую (около 150-200 слов), добрую и поучительную сказку на ночь на русском языке для ребенка по имени ${params.name}. 
@@ -32,7 +30,7 @@ export const generateStory = async (params: StoryParams): Promise<string> => {
             model: model,
             contents: prompt,
             config: {
-                temperature: 0.8, // Slightly creative
+                temperature: 0.8,
                 topK: 40,
                 topP: 0.95,
             }
@@ -40,11 +38,15 @@ export const generateStory = async (params: StoryParams): Promise<string> => {
 
         const text = response.text;
         if (!text) {
-            throw new Error("No story generated");
+            throw new Error("Не удалось сгенерировать текст сказки.");
         }
         return text;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Gemini API Error:", error);
-        throw error;
+        // Pass through the specific API key error if we caught it earlier, or a generic one
+        if (error.message.includes("API Key")) {
+            throw error;
+        }
+        throw new Error("Ошибка соединения с магическим кристаллом (API). Попробуйте позже.");
     }
 };
