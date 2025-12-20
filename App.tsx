@@ -73,10 +73,7 @@ function App() {
       setAppState(AppState.ERROR);
       const msg = error?.message || "Неизвестная ошибка";
       setErrorMessage(msg);
-      setTimeout(() => {
-        setAppState(AppState.INPUT);
-        setErrorMessage('');
-      }, 5000);
+      // Убрали таймаут, чтобы пользователь успел прочитать ошибку
     }
   };
 
@@ -91,6 +88,7 @@ function App() {
     setGeneratedStoryData(null);
     setParams(null);
     setAppState(AppState.INPUT);
+    setErrorMessage('');
   };
 
   const handleOpenLibrary = () => {
@@ -139,13 +137,18 @@ function App() {
         )}
 
         {appState === AppState.ERROR && (
-            <div className="max-w-md w-full text-center p-8 bg-red-900/80 backdrop-blur-md border border-red-500 rounded-xl shadow-2xl animate-bounce-in">
+            <div className="max-w-md w-full text-center p-8 bg-red-900/80 backdrop-blur-md border border-red-500 rounded-xl shadow-2xl animate-bounce-in relative z-50">
                 <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                      <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">Упс! Магия дала сбой</h3>
-                <p className="text-red-200 mb-4">{errorMessage}</p>
-                <p className="text-sm text-gray-400">Попробуйте еще раз через пару секунд...</p>
+                <p className="text-red-200 mb-6 text-sm break-words">{errorMessage}</p>
+                <button 
+                    onClick={handleReset}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg hover:shadow-red-500/30 transform hover:scale-105"
+                >
+                    Попробовать снова
+                </button>
             </div>
         )}
 

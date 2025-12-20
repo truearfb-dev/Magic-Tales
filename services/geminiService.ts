@@ -69,9 +69,27 @@ export const generateStory = async (params: StoryParams): Promise<{ title: strin
 
     } catch (error: any) {
         console.error("Gemini API Error:", error);
-        if (error.message.includes("API Key")) {
+        
+        // Если это наша кастомная ошибка про ключ - пробрасываем её
+        if (error.message && error.message.includes("API Key не найден")) {
             throw error;
         }
-        throw new Error("Ошибка соединения с магическим кристаллом (API). Попробуйте позже.");
+
+        // Формируем более понятное сообщение об ошибке
+        let friendlyMessage = "Ошибка соединения с магическим кристаллом (API).";
+        
+        // Добавляем технические детали из ответа API, если они есть
+        const technicalDetails = error.message || error.statusText || JSON.stringify(error);
+        
+        // Проверяем распространенные коды ошибок
+        if (technicalDetails.includes("429")) {
+            friendlyMessage = "Слишком много запросов. Магии нужно немного отдохнуть.";
+        } else if (technicalDetails.includes("503") || technicalDetails.includes("500")) {
+            friendlyMessage = "Магический сервер временно недоступен.";
+        } else if (technicalDetails.includes("SAFETY")) {
+            friendlyMessage = "Сказка не прошла магический контроль безопасности (попробуйте другую тему).";
+        }
+
+        throw new Error(`${friendlyMessage} (Детали: ${technicalDetails})`);
     }
 };
