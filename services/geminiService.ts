@@ -88,6 +88,8 @@ export const generateStory = async (params: StoryParams): Promise<{ title: strin
             friendlyMessage = "Магический сервер временно недоступен.";
         } else if (technicalDetails.includes("SAFETY")) {
             friendlyMessage = "Сказка не прошла магический контроль безопасности (попробуйте другую тему).";
+        } else if (technicalDetails.includes("User location is not supported") || technicalDetails.includes("location is not supported")) {
+            friendlyMessage = "В вашем регионе магия временно недоступна. Пожалуйста, попробуйте включить VPN.";
         }
 
         throw new Error(`${friendlyMessage} (Детали: ${technicalDetails})`);
