@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { InputForm } from './components/InputForm';
 import { StoryBook } from './components/StoryBook';
-import { SubscriptionModal } from './components/SubscriptionModal';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { Library } from './components/Library';
 import { generateStory } from './services/geminiService';
@@ -66,7 +65,8 @@ function App() {
       // Auto-save successful story
       saveStoryToLibrary(storyData.title, storyData.content, inputParams.hero);
 
-      setAppState(AppState.LOCKED);
+      // Сразу переходим к чтению, шаг с подпиской удален
+      setAppState(AppState.READING);
     } catch (error: any) {
       console.error(error);
       setAppState(AppState.ERROR);
@@ -77,13 +77,6 @@ function App() {
         setErrorMessage('');
       }, 5000);
     }
-  };
-
-  const handleUnlock = () => {
-      setAppState(AppState.UNLOCKING);
-      setTimeout(() => {
-          setAppState(AppState.READING);
-      }, 500);
   };
 
   const handleReset = () => {
@@ -146,17 +139,6 @@ function App() {
                 <p className="text-red-200 mb-4">{errorMessage}</p>
                 <p className="text-sm text-gray-400">Попробуйте еще раз через пару секунд...</p>
             </div>
-        )}
-
-        {appState === AppState.LOCKED && (
-           <>
-              <LoadingOverlay />
-              <SubscriptionModal onUnlock={handleUnlock} />
-           </>
-        )}
-
-         {appState === AppState.UNLOCKING && (
-            <LoadingOverlay />
         )}
 
         {appState === AppState.READING && generatedStoryData && (
