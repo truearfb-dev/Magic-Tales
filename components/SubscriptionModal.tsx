@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 
+// ВСТАВЬТЕ ССЫЛКУ НА ВАШ КАНАЛ ЗДЕСЬ
+const TELEGRAM_CHANNEL_LINK = 'https://t.me/groupaifaily';
+
 interface SubscriptionModalProps {
     onUnlock: () => void;
 }
@@ -9,7 +12,8 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onUnlock }
 
     const handleCheckSubscription = () => {
         setIsLoading(true);
-        // Mock check delay
+        // Имитация проверки подписки (задержка 2 секунды)
+        // В реальном приложении здесь может быть запрос к вашему боту
         setTimeout(() => {
             setIsLoading(false);
             onUnlock();
@@ -35,7 +39,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onUnlock }
 
                 <div className="space-y-3">
                     <a 
-                        href="https://t.me/groupaifaily" 
+                        href={TELEGRAM_CHANNEL_LINK} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="block w-full bg-[#2AABEE] hover:bg-[#229ED9] text-white font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2"

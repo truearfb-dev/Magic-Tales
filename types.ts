@@ -16,6 +16,8 @@ export interface SavedStory {
 export enum AppState {
     INPUT = 'INPUT',
     GENERATING = 'GENERATING',
+    LOCKED = 'LOCKED',
+    UNLOCKING = 'UNLOCKING',
     READING = 'READING',
     LIBRARY = 'LIBRARY',
     ERROR = 'ERROR'
