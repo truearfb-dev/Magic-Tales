@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 
-// ВСТАВЬТЕ ССЫЛКУ НА ВАШ КАНАЛ ЗДЕСЬ
+// Имя вашего канала через @ (так надежнее для API, если бот админ)
+// Или можно использовать ID канала (начинается с -100...), если знаете его.
+const TELEGRAM_CHANNEL_USERNAME = '@groupaifaily';
 const TELEGRAM_CHANNEL_LINK = 'https://t.me/groupaifaily';
 
 interface SubscriptionModalProps {
@@ -9,15 +11,60 @@ interface SubscriptionModalProps {
 
 export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onUnlock }) => {
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleCheckSubscription = () => {
+    const handleCheckSubscription = async () => {
         setIsLoading(true);
-        // Имитация проверки подписки (задержка 2 секунды)
-        // В реальном приложении здесь может быть запрос к вашему боту
-        setTimeout(() => {
+        setError(null);
+
+        // Получаем ID пользователя из Telegram WebApp
+        // ВАЖНО: Это работает только внутри Telegram
+        const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+
+        if (!user) {
+            // Если мы тестируем в браузере (не в Телеграм), разрешаем доступ для отладки
+            console.warn("User ID not found (running in browser?). Allowing access for debug.");
+            setTimeout(() => {
+                setIsLoading(false);
+                onUnlock();
+            }, 1000);
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/check-subscription', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId: user.id,
+                    channelUsername: TELEGRAM_CHANNEL_USERNAME
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                // Если API вернул ошибку (например, бот не админ)
+                if (data.details && data.details.includes("chat not found")) {
+                    throw new Error("Ошибка настройки: Бот не добавлен в администраторы канала.");
+                }
+                throw new Error(data.error || "Ошибка проверки");
+            }
+
+            if (data.subscribed) {
+                onUnlock();
+            } else {
+                setError("Похоже, вы еще не подписались. Попробуйте нажать кнопку подписки и проверить снова.");
+            }
+
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || "Не удалось проверить подписку. Попробуйте позже.");
+        } finally {
             setIsLoading(false);
-            onUnlock();
-        }, 2000);
+        }
     };
 
     return (
@@ -33,9 +80,15 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onUnlock }
                 </div>
 
                 <h3 className="text-2xl font-bold text-white mb-2">Сказка почти готова!</h3>
-                <p className="text-gray-400 mb-8">
+                <p className="text-gray-400 mb-6">
                     Чтобы прочитать волшебную историю, пожалуйста, подпишитесь на наш Telegram канал.
                 </p>
+
+                {error && (
+                    <div className="mb-6 p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-red-200 text-xs">
+                        {error}
+                    </div>
+                )}
 
                 <div className="space-y-3">
                     <a 
@@ -53,9 +106,14 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onUnlock }
                     <button 
                         onClick={handleCheckSubscription}
                         disabled={isLoading}
-                        className="block w-full bg-transparent border-2 border-[#2D3766] hover:border-[#FDE047] text-gray-300 hover:text-[#FDE047] font-semibold py-3 px-4 rounded-xl transition-all"
+                        className="block w-full bg-transparent border-2 border-[#2D3766] hover:border-[#FDE047] text-gray-300 hover:text-[#FDE047] font-semibold py-3 px-4 rounded-xl transition-all flex justify-center items-center"
                     >
-                        {isLoading ? 'Проверяем подписку...' : 'Я подписался'}
+                        {isLoading ? (
+                            <svg className="animate-spin h-5 w-5 text-[#FDE047]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        ) : 'Я подписался'}
                     </button>
                 </div>
             </div>
