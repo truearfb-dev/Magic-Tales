@@ -1,66 +1,29 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { StoryParams } from "../types";
 
-// Initialize Gemini Client
-const apiKey = process.env.API_KEY || ""; 
-const ai = new GoogleGenAI({ apiKey: apiKey });
-
 export const generateStory = async (params: StoryParams): Promise<{ title: string; content: string }> => {
-    // Check if key exists immediately
-    if (!apiKey) {
-        console.error("API Key is missing in the build!");
-        throw new Error("API Key не найден. Добавьте переменную API_KEY в настройках Vercel и пересоберите проект (Redeploy).");
-    }
-
-    const topic = params.topic === "Свой вариант" ? params.customTopic : params.topic;
-    
-    // Using gemini-3-flash-preview as recommended for text tasks
-    const model = 'gemini-3-flash-preview'; 
-
-    const prompt = `Ты — талантливый детский писатель.
-    Напиши добрую сказку (около 150-200 слов) для ребенка по имени ${params.name}.
-    Главный герой: ${params.hero}.
-    Сюжет учит: ${topic || "доброте"}.
-
-    Требования к ответу (JSON):
-    1. "title": Придумай ЛИТЕРАТУРНЫЙ, креативный заголовок (3-5 слов).
-       ВАЖНО: Обязательно просклоняй имя героя в заголовке, если нужно (например, не "Про Смелый Зайчик", а "Приключения Смелого Зайчика").
-    2. "content": Текст сказки. Раздели его на 3-4 логических абзаца. Используй символ переноса строки (\\n) между абзацами.
-    3. Стиль: Мягкий, волшебный, убаюкивающий.
-    `;
-
     try {
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: prompt,
-            config: {
-                temperature: 0.7, // Чуть ниже для большей связности
-                topK: 40,
-                topP: 0.95,
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        title: {
-                            type: Type.STRING,
-                            description: "Креативный заголовок сказки с правильным склонением имен.",
-                        },
-                        content: {
-                            type: Type.STRING,
-                            description: "Текст сказки с переносами строк.",
-                        },
-                    },
-                    required: ["title", "content"],
-                },
-            }
+        // Теперь мы отправляем запрос на НАШ сервер (Vercel), а не в Google напрямую.
+        // Сервер сам свяжется с Google, и ошибка геолокации исчезнет.
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(params)
         });
 
-        const text = response.text;
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Server Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const text = data.text;
+
         if (!text) {
-            throw new Error("Не удалось сгенерировать текст сказки.");
+            throw new Error("Не удалось получить текст сказки от сервера.");
         }
         
-        // Parse JSON response
         const jsonResponse = JSON.parse(text);
         return {
             title: jsonResponse.title,
@@ -68,28 +31,15 @@ export const generateStory = async (params: StoryParams): Promise<{ title: strin
         };
 
     } catch (error: any) {
-        console.error("Gemini API Error:", error);
+        console.error("Story Generation Error:", error);
         
-        // Если это наша кастомная ошибка про ключ - пробрасываем её
-        if (error.message && error.message.includes("API Key не найден")) {
-            throw error;
-        }
+        let friendlyMessage = "Ошибка соединения с магическим кристаллом.";
+        const technicalDetails = error.message || "Unknown error";
 
-        // Формируем более понятное сообщение об ошибке
-        let friendlyMessage = "Ошибка соединения с магическим кристаллом (API).";
-        
-        // Добавляем технические детали из ответа API, если они есть
-        const technicalDetails = error.message || error.statusText || JSON.stringify(error);
-        
-        // Проверяем распространенные коды ошибок
-        if (technicalDetails.includes("429")) {
-            friendlyMessage = "Слишком много запросов. Магии нужно немного отдохнуть.";
-        } else if (technicalDetails.includes("503") || technicalDetails.includes("500")) {
-            friendlyMessage = "Магический сервер временно недоступен.";
-        } else if (technicalDetails.includes("SAFETY")) {
-            friendlyMessage = "Сказка не прошла магический контроль безопасности (попробуйте другую тему).";
-        } else if (technicalDetails.includes("User location is not supported") || technicalDetails.includes("location is not supported")) {
-            friendlyMessage = "В вашем регионе магия временно недоступна. Пожалуйста, попробуйте включить VPN.";
+        if (technicalDetails.includes("504") || technicalDetails.includes("timeout")) {
+            friendlyMessage = "Магия творится слишком долго, попробуйте еще раз.";
+        } else if (technicalDetails.includes("429")) {
+            friendlyMessage = "Слишком много желающих получить сказку. Подождите минутку.";
         }
 
         throw new Error(`${friendlyMessage} (Детали: ${technicalDetails})`);
