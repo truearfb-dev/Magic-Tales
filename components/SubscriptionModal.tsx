@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 
-// Имя вашего канала через @ (так надежнее для API, если бот админ)
-// Или можно использовать ID канала (начинается с -100...), если знаете его.
+// Имя вашего канала
 const TELEGRAM_CHANNEL_USERNAME = '@groupaifaily';
 const TELEGRAM_CHANNEL_LINK = 'https://t.me/groupaifaily';
 
@@ -17,17 +16,15 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onUnlock }
         setIsLoading(true);
         setError(null);
 
-        // Получаем ID пользователя из Telegram WebApp
-        // ВАЖНО: Это работает только внутри Telegram
-        const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        // Получаем данные пользователя из Telegram
+        const webApp = window.Telegram?.WebApp;
+        const user = webApp?.initDataUnsafe?.user;
 
-        if (!user) {
-            // Если мы тестируем в браузере (не в Телеграм), разрешаем доступ для отладки
-            console.warn("User ID not found (running in browser?). Allowing access for debug.");
-            setTimeout(() => {
-                setIsLoading(false);
-                onUnlock();
-            }, 1000);
+        // СТРОГАЯ ПРОВЕРКА: Если нет User ID, мы не можем проверить подписку.
+        // Раньше тут был пропуск для отладки, теперь его нет.
+        if (!user || !user.id) {
+            setError("Ошибка: Не удалось определить ваш Telegram ID. Попробуйте перезапустить приложение через меню бота.");
+            setIsLoading(false);
             return;
         }
 
@@ -46,21 +43,23 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onUnlock }
             const data = await response.json();
 
             if (!response.ok) {
-                // Если API вернул ошибку (например, бот не админ)
+                // Обработка ошибок сервера
                 if (data.details && data.details.includes("chat not found")) {
-                    throw new Error("Ошибка настройки: Бот не добавлен в администраторы канала.");
+                    throw new Error("Ошибка настройки: Бот не является администратором канала @groupaifaily.");
                 }
-                throw new Error(data.error || "Ошибка проверки");
+                throw new Error(data.error || "Ошибка соединения с сервером проверки.");
             }
 
             if (data.subscribed) {
+                // Успех!
                 onUnlock();
             } else {
-                setError("Похоже, вы еще не подписались. Попробуйте нажать кнопку подписки и проверить снова.");
+                // Если API вернул false - значит пользователь точно не подписан (или статус 'left'/'kicked')
+                setError("Система пока не видит вашу подписку. Подпишитесь и нажмите кнопку снова.");
             }
 
         } catch (err: any) {
-            console.error(err);
+            console.error("Sub check error:", err);
             setError(err.message || "Не удалось проверить подписку. Попробуйте позже.");
         } finally {
             setIsLoading(false);
