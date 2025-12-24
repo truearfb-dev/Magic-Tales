@@ -2,8 +2,6 @@ import { StoryParams } from "../types";
 
 export const generateStory = async (params: StoryParams): Promise<{ title: string; content: string }> => {
     try {
-        // Теперь мы отправляем запрос на НАШ сервер (Vercel), а не в Google напрямую.
-        // Сервер сам свяжется с Google, и ошибка геолокации исчезнет.
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: {
@@ -14,7 +12,8 @@ export const generateStory = async (params: StoryParams): Promise<{ title: strin
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `Server Error: ${response.status}`);
+            // Передаем статус ошибки в сообщение, чтобы поймать его в catch
+            throw new Error(JSON.stringify(errorData) || `Server Error: ${response.status}`);
         }
 
         const data = await response.json();
@@ -33,15 +32,29 @@ export const generateStory = async (params: StoryParams): Promise<{ title: strin
     } catch (error: any) {
         console.error("Story Generation Error:", error);
         
-        let friendlyMessage = "Ошибка соединения с магическим кристаллом.";
-        const technicalDetails = error.message || "Unknown error";
+        // Пытаемся достать текст ошибки (она может быть внутри JSON строки)
+        let errorMsg = error.message || "";
+        
+        // Проверяем на типичные ошибки лимитов Google API
+        const isQuotaError = 
+            errorMsg.includes("429") || 
+            errorMsg.includes("RESOURCE_EXHAUSTED") || 
+            errorMsg.includes("Quota exceeded") ||
+            errorMsg.includes("limit");
 
-        if (technicalDetails.includes("504") || technicalDetails.includes("timeout")) {
-            friendlyMessage = "Магия творится слишком долго, попробуйте еще раз.";
-        } else if (technicalDetails.includes("429")) {
-            friendlyMessage = "Слишком много желающих получить сказку. Подождите минутку.";
+        if (isQuotaError) {
+            throw new Error("Слишком много желающих получить сказку прямо сейчас. Магический кристалл перегрелся! 🪄\n\nПожалуйста, подождите минутку и попробуйте снова.");
         }
 
-        throw new Error(`${friendlyMessage} (Детали: ${technicalDetails})`);
+        if (errorMsg.includes("504") || errorMsg.includes("timeout")) {
+            throw new Error("Сказка сочиняется дольше обычного. Пожалуйста, попробуйте еще раз.");
+        }
+
+        // Если ошибка выглядит как технический JSON (как на скриншоте), скрываем её
+        if (errorMsg.includes("{") && errorMsg.includes("error")) {
+             throw new Error("Произошла небольшая магическая заминка. Попробуйте нажать кнопку еще раз.");
+        }
+
+        throw new Error("Не удалось создать сказку. Проверьте интернет и попробуйте снова.");
     }
 };

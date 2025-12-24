@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 // Vercel Serverless Function definition
 export default async function handler(request: any, response: any) {
-    // Настройка CORS, чтобы фронтенд мог обращаться к этому API
+    // Настройка CORS
     response.setHeader('Access-Control-Allow-Credentials', "true");
     response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -11,7 +11,6 @@ export default async function handler(request: any, response: any) {
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
     );
 
-    // Обработка preflight запроса
     if (request.method === 'OPTIONS') {
         return response.status(200).end();
     }
@@ -20,7 +19,6 @@ export default async function handler(request: any, response: any) {
         return response.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    // Получаем ключ из переменных окружения СЕРВЕРА
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
         return response.status(500).json({ error: 'Server configuration error: API_KEY is missing' });
@@ -72,14 +70,23 @@ export default async function handler(request: any, response: any) {
             }
         });
 
-        // Возвращаем результат обратно на фронтенд
         return response.status(200).json({ text: result.text });
 
     } catch (error: any) {
         console.error("Server API Error:", error);
-        return response.status(500).json({ 
-            error: error.message || 'Internal Server Error',
-            details: error.toString()
+        
+        // Определяем статус ответа
+        let status = 500;
+        let message = error.message || 'Internal Server Error';
+
+        if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
+            status = 429;
+            message = 'Quota exceeded';
+        }
+
+        return response.status(status).json({ 
+            error: message,
+            // Не отправляем полный дамп error.toString(), чтобы не пугать пользователя
         });
     }
 }
