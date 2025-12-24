@@ -30,9 +30,10 @@ export default async function handler(request: any, response: any) {
 
         const finalTopic = topic === "Свой вариант" ? customTopic : topic;
         
-        // Переключаем на gemini-2.0-flash для большей стабильности
-        // gemini-3-flash-preview часто выдает 429 Quota Exceeded в бесплатном тире
-        const model = 'gemini-2.0-flash'; 
+        // ИСПОЛЬЗУЕМ STABLE ВЕРСИЮ
+        // 'gemini-flash-latest' всегда указывает на самую актуальную СТАБИЛЬНУЮ версию (сейчас это 1.5 или 2.0)
+        // Это лучше всего подходит для Production приложений с реальными пользователями.
+        const model = 'gemini-flash-latest'; 
 
         const prompt = `Ты — талантливый детский писатель.
         Напиши добрую сказку (около 150-200 слов) для ребенка по имени ${name}.
@@ -82,9 +83,10 @@ export default async function handler(request: any, response: any) {
         let status = 500;
         let message = error.message || 'Internal Server Error';
 
-        if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
+        // Ловим ошибки лимитов
+        if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED') || message.includes('Quota')) {
             status = 429;
-            message = 'Слишком много запросов. Попробуйте через минуту.';
+            message = 'Система перегружена. Пожалуйста, подождите минутку и попробуйте снова.';
         }
 
         return response.status(status).json({ 
