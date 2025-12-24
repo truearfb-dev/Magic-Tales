@@ -29,7 +29,10 @@ export default async function handler(request: any, response: any) {
         const { name, hero, topic, customTopic } = body;
 
         const finalTopic = topic === "Свой вариант" ? customTopic : topic;
-        const model = 'gemini-3-flash-preview'; 
+        
+        // Переключаем на gemini-2.0-flash для большей стабильности
+        // gemini-3-flash-preview часто выдает 429 Quota Exceeded в бесплатном тире
+        const model = 'gemini-2.0-flash'; 
 
         const prompt = `Ты — талантливый детский писатель.
         Напиши добрую сказку (около 150-200 слов) для ребенка по имени ${name}.
@@ -81,12 +84,11 @@ export default async function handler(request: any, response: any) {
 
         if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
             status = 429;
-            message = 'Quota exceeded';
+            message = 'Слишком много запросов. Попробуйте через минуту.';
         }
 
         return response.status(status).json({ 
-            error: message,
-            // Не отправляем полный дамп error.toString(), чтобы не пугать пользователя
+            error: message 
         });
     }
 }
