@@ -16,7 +16,15 @@ function App() {
   const [params, setParams] = useState<StoryParams | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [savedStories, setSavedStories] = useState<SavedStory[]>([]);
-  const [isUserSubscribed, setIsUserSubscribed] = useState<boolean>(false);
+  
+  // Инициализируем состояние сразу из LocalStorage (Lazy Initialization)
+  // Это гарантирует, что isUserSubscribed будет true уже при первом рендере, если запись есть
+  const [isUserSubscribed, setIsUserSubscribed] = useState<boolean>(() => {
+      if (typeof window !== 'undefined') {
+          return localStorage.getItem(SUBSCRIPTION_KEY) === 'true';
+      }
+      return false;
+  });
 
   // Инициализация Telegram Mini App и загрузка историй
   useEffect(() => {
@@ -40,12 +48,6 @@ function App() {
       } catch (e) {
         console.error("Failed to parse stories", e);
       }
-    }
-
-    // Проверяем, был ли пользователь уже проверен ранее
-    const subStatus = localStorage.getItem(SUBSCRIPTION_KEY);
-    if (subStatus === 'true') {
-        setIsUserSubscribed(true);
     }
   }, []);
 
@@ -74,11 +76,14 @@ function App() {
       // Auto-save successful story
       saveStoryToLibrary(storyData.title, storyData.content, inputParams.hero);
 
-      // Если пользователь уже подписан, сразу показываем сказку
-      if (isUserSubscribed) {
+      // Проверка подписки:
+      // 1. Смотрим в состояние React
+      // 2. ИЛИ проверяем напрямую в localStorage (для надежности)
+      const isSubscribed = isUserSubscribed || localStorage.getItem(SUBSCRIPTION_KEY) === 'true';
+
+      if (isSubscribed) {
           setAppState(AppState.READING);
       } else {
-          // Иначе блокируем просмотр до подписки
           setAppState(AppState.LOCKED);
       }
     } catch (error: any) {
