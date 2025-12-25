@@ -8,6 +8,7 @@ import { generateStory } from './services/geminiService';
 import { StoryParams, AppState, SavedStory } from './types';
 
 const STORAGE_KEY = 'magic_tales_library';
+const SUBSCRIPTION_KEY = 'magic_tales_is_subscribed';
 
 function App() {
   const [appState, setAppState] = useState<AppState>(AppState.INPUT);
@@ -15,6 +16,7 @@ function App() {
   const [params, setParams] = useState<StoryParams | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [savedStories, setSavedStories] = useState<SavedStory[]>([]);
+  const [isUserSubscribed, setIsUserSubscribed] = useState<boolean>(false);
 
   // Инициализация Telegram Mini App и загрузка историй
   useEffect(() => {
@@ -38,6 +40,12 @@ function App() {
       } catch (e) {
         console.error("Failed to parse stories", e);
       }
+    }
+
+    // Проверяем, был ли пользователь уже проверен ранее
+    const subStatus = localStorage.getItem(SUBSCRIPTION_KEY);
+    if (subStatus === 'true') {
+        setIsUserSubscribed(true);
     }
   }, []);
 
@@ -66,18 +74,26 @@ function App() {
       // Auto-save successful story
       saveStoryToLibrary(storyData.title, storyData.content, inputParams.hero);
 
-      // Блокируем просмотр до подписки
-      setAppState(AppState.LOCKED);
+      // Если пользователь уже подписан, сразу показываем сказку
+      if (isUserSubscribed) {
+          setAppState(AppState.READING);
+      } else {
+          // Иначе блокируем просмотр до подписки
+          setAppState(AppState.LOCKED);
+      }
     } catch (error: any) {
       console.error(error);
       setAppState(AppState.ERROR);
       const msg = error?.message || "Неизвестная ошибка";
       setErrorMessage(msg);
-      // Убрали таймаут, чтобы пользователь успел прочитать ошибку
     }
   };
 
   const handleUnlock = () => {
+      // Сохраняем статус подписки навсегда (в рамках этого браузера)
+      localStorage.setItem(SUBSCRIPTION_KEY, 'true');
+      setIsUserSubscribed(true);
+
       setAppState(AppState.UNLOCKING);
       setTimeout(() => {
           setAppState(AppState.READING);
