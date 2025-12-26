@@ -18,7 +18,6 @@ function App() {
   const [savedStories, setSavedStories] = useState<SavedStory[]>([]);
   
   // Инициализируем состояние сразу из LocalStorage (Lazy Initialization)
-  // Это гарантирует, что isUserSubscribed будет true уже при первом рендере, если запись есть
   const [isUserSubscribed, setIsUserSubscribed] = useState<boolean>(() => {
       if (typeof window !== 'undefined') {
           return localStorage.getItem(SUBSCRIPTION_KEY) === 'true';
@@ -76,9 +75,6 @@ function App() {
       // Auto-save successful story
       saveStoryToLibrary(storyData.title, storyData.content, inputParams.hero);
 
-      // Проверка подписки:
-      // 1. Смотрим в состояние React
-      // 2. ИЛИ проверяем напрямую в localStorage (для надежности)
       const isSubscribed = isUserSubscribed || localStorage.getItem(SUBSCRIPTION_KEY) === 'true';
 
       if (isSubscribed) {
@@ -95,7 +91,6 @@ function App() {
   };
 
   const handleUnlock = () => {
-      // Сохраняем статус подписки навсегда (в рамках этого браузера)
       localStorage.setItem(SUBSCRIPTION_KEY, 'true');
       setIsUserSubscribed(true);
 
@@ -105,11 +100,22 @@ function App() {
       }, 500);
   };
 
+  // Полный сброс (для кнопки "Создать новую")
   const handleReset = () => {
     setGeneratedStoryData(null);
     setParams(null);
     setAppState(AppState.INPUT);
     setErrorMessage('');
+  };
+
+  // Повторная попытка (для кнопки "Попробовать снова" при ошибке)
+  const handleRetry = () => {
+    if (params) {
+        handleGenerate(params);
+    } else {
+        // Если параметров по какой-то причине нет, возвращаем на ввод
+        handleReset();
+    }
   };
 
   const handleOpenLibrary = () => {
@@ -164,12 +170,20 @@ function App() {
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">Упс! Магия дала сбой</h3>
                 <p className="text-red-200 mb-6 text-sm break-words">{errorMessage}</p>
-                <button 
-                    onClick={handleReset}
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg hover:shadow-red-500/30 transform hover:scale-105"
-                >
-                    Попробовать снова
-                </button>
+                <div className="flex flex-col gap-3">
+                    <button 
+                        onClick={handleRetry}
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg hover:shadow-red-500/30 transform hover:scale-105"
+                    >
+                        Попробовать снова
+                    </button>
+                    <button 
+                        onClick={handleReset}
+                        className="text-gray-400 hover:text-white text-sm underline decoration-gray-500 hover:decoration-white transition-all"
+                    >
+                        Изменить данные
+                    </button>
+                </div>
             </div>
         )}
 
